@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/valryon/imdb-spreadsheet/issues"
   },
-  "homepage": "https://github.com/valryon/imdb-spreadsheet#readme"
+  "homepage": "https://github.com/valryon/imdb-spreadsheet#readme",
+  "dependencies": {
+    "dotenv": "^8.2.0"
+  }
 }
