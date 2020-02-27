@@ -1,0 +1,19 @@
+{
+  "name": "imdb-spreadsheet",
+  "version": "0.0.1",
+  "description": "Fill / complete a spreadsheet with IMDb film data",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/valryon/imdb-spreadsheet.git"
+  },
+  "author": "Damien Mayance",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/valryon/imdb-spreadsheet/issues"
+  },
+  "homepage": "https://github.com/valryon/imdb-spreadsheet#readme"
+}
