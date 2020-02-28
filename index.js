@@ -2,7 +2,7 @@ require('dotenv').config()
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const request = require("request-promise");
 
-const IgnoreNonEmptyIds = false
+const RefreshAll = false
 
 // ==============================================================================
 main()
@@ -47,20 +47,34 @@ async function UpdateSpreadsheet() {
 
 async function UpdateMovie(r) {
   let name = r['Nom']
-  if(IgnoreNonEmptyIds ==false && r['IMDb ID'] ) {
+  let imdbId = r['IMDb']
+  let tmdbId = r['TMDb']
+  let forced = r['Refresh']
+
+  if(!forced && RefreshAll == false && (imdbId || tmdbId)) {
     console.log("🔕 " + name)
     return
   }
 
-  // console.dir(r)
-  const movie = await GetMovie(name)
+  let movie
+  if(forced && tmdbId) {
+    movie = await GetDetail(tmdbId)
 
-  if(!movie) {
-    console.log("❌ " + name + " not found")
-    return
+    if(!movie) {
+      console.log("❌ " + name + " not found (forced=" +forced+" tmdbId=" + tmdbId + ")")
+      return
+    }
+  } else {
+    movie = await GetMovie(name)
+
+    if(!movie) {
+      console.log("❌ " + name + " not found")
+      return
+    }
   }
 
-  r['IMDb ID'] = movie.imdb_id
+  r['TMDb'] = movie.id
+  r['IMDb'] = movie.imdb_id
   r['Link'] = 'https://www.imdb.com/title/' + movie.imdb_id
   r['Cover'] = '=IMAGE(\"' + movie.cover + '\")'
   r['Plot'] = movie.plot
@@ -68,6 +82,7 @@ async function UpdateMovie(r) {
   r['Titre FR'] = movie.titleFR
   r['Genre'] = movie.genre
   r['Année'] = movie.release_year
+  r['Refresh'] = ''
   r.save()
 
   console.log("✅ " + r['Titre nous'] + " -> " + (movie.titleFR ? movie.titleFR : movie.title) + " ("+movie.imdb_id+")")
