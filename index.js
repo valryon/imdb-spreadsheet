@@ -51,6 +51,8 @@ async function UpdateMovie(r) {
   let tmdbId = r['TMDb']
   let forced = r['Refresh']
 
+  if(!name && !tmdbId) return;
+
   if(!forced && RefreshAll == false && (imdbId || tmdbId)) {
     console.log("🔕 " + name)
     return
@@ -59,18 +61,13 @@ async function UpdateMovie(r) {
   let movie
   if(forced && tmdbId) {
     movie = await GetDetail(tmdbId)
-
-    if(!movie) {
-      console.log("❌ " + name + " not found (forced=" +forced+" tmdbId=" + tmdbId + ")")
-      return
-    }
-  } else {
+  } else if(name){
     movie = await GetMovie(name)
+  }
 
-    if(!movie) {
-      console.log("❌ " + name + " not found")
-      return
-    }
+  if(!movie) {
+    console.log("❌ " + name + " not found (forced=" +forced+" tmdbId=" + tmdbId + ")")
+    return
   }
 
   r['TMDb'] = movie.id
