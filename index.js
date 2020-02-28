@@ -1,22 +1,30 @@
 require('dotenv').config()
 const { GoogleSpreadsheet } = require('google-spreadsheet');
-const http = require('https');
+const request = require("request-promise");
 
-const IgnoreNonEmptyIds = true
+const IgnoreNonEmptyIds = false
 
 // ==============================================================================
-// GetMovie("wolf children", function(m) {
-//   console.dir(m)
-// })
-GetSpreadsheet()
-.catch((e) => console.error(e.message));
+main()
+
+async function main() {
+  try {
+    UpdateSpreadsheet()
+
+    // let m = await GetMovie("wolf children")
+    // console.dir(m)
+  
+  } catch(error) {
+    console.error(e.message)
+  }
+}
 
 // ==============================================================================
 
 // ==============================================================================
 // Google Spreadsheet API
 // ==============================================================================
-async function GetSpreadsheet() {
+async function UpdateSpreadsheet() {
   const doc = new GoogleSpreadsheet(process.env.SHEET_ID)
 
   await doc.useServiceAccountAuth({
@@ -28,8 +36,8 @@ async function GetSpreadsheet() {
   
   const sheet = doc.sheetsByIndex[0];
   const rows = await sheet.getRows({
-    offset: 1,
-    limit: 10
+    // offset: 1
+    //limit: 10
   }); 
   
   for (const r of rows) {
@@ -38,25 +46,31 @@ async function GetSpreadsheet() {
 }
 
 async function UpdateMovie(r) {
+  let name = r['Nom']
   if(IgnoreNonEmptyIds ==false && r['IMDb ID'] ) {
-    console.log("🔕 " + r['Titre nous'])
+    console.log("🔕 " + name)
     return
   }
 
   // console.dir(r)
-  GetMovie(r['Titre nous'], function(movie) {
-    r['IMDb ID'] = movie.imdb_id
-    r['Link'] = 'https://www.imdb.com/title/' + movie.imdb_id
-    r['Cover'] = '=IMAGE(\"' + movie.cover + '\")'
-    r['Plot'] = movie.plot
-    r['Titre US'] = movie.title
-    r['Titre FR'] = movie.titleFR
-    r['Genre'] = movie.genre
-    r['Année'] = movie.release_year
-    r.save()
+  const movie = await GetMovie(name)
 
-    console.log("✅ " + r['Titre nous'] + " -> " + r['Titre FR'] + "("+movie.imdb_id+")")
-  })
+  if(!movie) {
+    console.log("❌ " + name + " not found")
+    return
+  }
+
+  r['IMDb ID'] = movie.imdb_id
+  r['Link'] = 'https://www.imdb.com/title/' + movie.imdb_id
+  r['Cover'] = '=IMAGE(\"' + movie.cover + '\")'
+  r['Plot'] = movie.plot
+  r['Titre Original'] = movie.title
+  r['Titre FR'] = movie.titleFR
+  r['Genre'] = movie.genre
+  r['Année'] = movie.release_year
+  r.save()
+
+  console.log("✅ " + r['Titre nous'] + " -> " + (movie.titleFR ? movie.titleFR : movie.title) + " ("+movie.imdb_id+")")
 }
 
 // ==============================================================================
@@ -66,69 +80,65 @@ async function UpdateMovie(r) {
 // ==============================================================================
 
 // Get a movie from a query
-function GetMovie(title, callback) {
+async function GetMovie(title, callback) {
 
-  CallTMDB('search/movie?query=' + encodeURIComponent(title), function(chunk) {
-    var results = JSON.parse(chunk).results
-    if(results.length > 0) {
-      GetDetail(results[0].id, callback)
-    }
-  })
+  const chunk = await CallTMDB('search/movie?query=' + encodeURIComponent(title))
+
+  let results = chunk.results
+  if(results.length > 0) {
+    const movie = await GetDetail(results[0].id)
+
+    return movie
+  }
+
+  return undefined
 }
 
 // Get a movie's details from a TMDB ID
-function GetDetail(id, callback) {
-  CallTMDB('movie/'+ id +'?', function(chunk) {
+async function GetDetail(id) {
+  const result = await CallTMDB('movie/'+ id +'?')
 
-      var result = JSON.parse(chunk)
-      var movie = {
-        id : result.id,
-        imdb_id : result.imdb_id,
-        title : result.title,
-        cover : 'https://image.tmdb.org/t/p/w300_and_h450_bestv2/' + result.poster_path,
-        plot :  result.overview,
-        genre : result.genres[0].name,
-        release_year : result.release_date.substring(0, 4)
-      }
+  let movie = {
+    id : result.id,
+    imdb_id : result.imdb_id,
+    title : result.title,
+    cover : 'https://image.tmdb.org/t/p/w300_and_h450_bestv2/' + result.poster_path,
+    plot :  result.overview,
+    genre : result.genres.length > 0 ? result.genres[0].name : '',
+    release_year : result.release_date.substring(0, 4)
+  }
 
-      GetTitleFR(id, function(titleFR) {
-        movie.titleFR = titleFR
-        callback(movie)
-      })
-  })
+  const titleFR = await GetTitleFR(id)
+  movie.titleFR = titleFR
+  
+  return movie
 }
 
 // Get the movie french title from the TMDB ID
-function GetTitleFR(id, callback) {
-  CallTMDB('movie/'+ id+ '/alternative_titles?', function(chunk) {
+async function GetTitleFR(id) {
+    const result = await CallTMDB('movie/'+ id+ '/alternative_titles?', function(chunk) {
 
-    var result = JSON.parse(chunk)
-
-    var fr = result.titles.find(element => element.iso_3166_1 == "FR")
-    var title = ''
+    let fr = result.titles.find(element => element.iso_3166_1 == "FR")
+    let title = ''
     if(fr) {
       title = fr.title
     }
 
-    callback(title)
+    return title
 })
 }
 
 // Wrapper for TMDB call
-function CallTMDB(path, callback) {
-  var options = {
-    host: 'api.themoviedb.org',
-    path: '/3/' + path + '&api_key=' + process.env.API_KEY,
-    method: 'GET'
+async function CallTMDB(path) {
+  let options = {
+    method: 'GET',
+    url: 'https://api.themoviedb.org/3/' + path + '&api_key=' + process.env.API_KEY
   };
 
-  console.log("🍺 https://"+ options.host + options.path)
+  console.log("🍺 " + options.url)
 
-  http.request(options, function(res) {
-    res.setEncoding('utf8');
-    res.on('data', function (chunk) {
-      callback(chunk)
-    });
-  }).end();
+  const result = await request(options)
+
+  return JSON.parse(result)
 }
 // ==============================================================================
