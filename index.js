@@ -82,7 +82,7 @@ async function UpdateMovie(r) {
   r['Refresh'] = ''
   r.save()
 
-  console.log("✅ " + r['Titre nous'] + " -> " + (movie.titleFR ? movie.titleFR : movie.title) + " ("+movie.imdb_id+")")
+  console.log("✅ " + name + " -> " + (movie.titleFR ? movie.titleFR : movie.title) + " ("+movie.imdb_id+")")
 }
 
 // ==============================================================================
