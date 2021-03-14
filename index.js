@@ -25,13 +25,14 @@ async function main() {
 // Google Spreadsheet API
 // ==============================================================================
 async function UpdateSpreadsheet() {
+  const creds = require('./google-generated-creds.json');
   const doc = new GoogleSpreadsheet(process.env.SHEET_ID)
 
-  await doc.useServiceAccountAuth({
-    client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    private_key: process.env.GOOGLE_PRIVATE_KEY,
-  });
-
+  // await doc.useServiceAccountAuth({
+  //   client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+  //   private_key: process.env.GOOGLE_PRIVATE_KEY,
+  // });
+  await doc.useServiceAccountAuth(creds);
   await doc.loadInfo(); // loads document properties and worksheets
   
   const sheet = doc.sheetsByIndex[0];
@@ -144,7 +145,7 @@ async function GetTitleFR(id) {
 async function CallTMDB(path) {
   let options = {
     method: 'GET',
-    url: 'https://api.themoviedb.org/3/' + path + '&api_key=' + process.env.API_KEY
+    url: 'https://api.themoviedb.org/3/' + path + '&api_key=' + process.env.MOVIEDB_API_KEY
   };
 
   console.log("🍺 " + options.url)
